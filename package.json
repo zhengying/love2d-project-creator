@@ -2,7 +2,7 @@
   "name": "love2d-project-creator",
   "displayName": "Love2D Project Creator",
   "description": "A VSCode extension for fast Love2D project creation with template management and project organization",
-  "version": "1.0.47",
+  "version": "1.0.18",
   "publisher": "zhengying",
   "icon": "assets/icon.png",
   "repository": {

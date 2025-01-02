@@ -42,6 +42,20 @@ fi
 echo "Packaging extension..."
 NODE_NO_WARNINGS=1 vsce package
 
+# Install immediately after building if --install flag is set
+if [[ "$1" == "--install" ]]; then
+  # Get the just-built .vsix file
+  just_built_vsix=$(ls -t *.vsix | head -n1)
+  if [[ -n "$just_built_vsix" ]]; then
+    echo "Installing just-built extension..."
+    code --install-extension "$just_built_vsix" --force
+    echo "Extension installation complete!"
+  else
+    echo "Error: Could not find just-built .vsix file"
+    exit 1
+  fi
+fi
+
 # Move the .vsix file to build directory
 mv *.vsix build/
 
