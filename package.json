@@ -1,0 +1,102 @@
+{
+  "name": "love2d-project-creator",
+  "displayName": "Love2D Project Creator",
+  "description": "A VSCode extension for fast Love2D project creation with template management and project organization",
+  "version": "1.0.47",
+  "publisher": "zhengying",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhegnying/love2d-project-creator"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Love2D Project Creator",
+      "properties": {
+        "love2dProjectCreator.defaultLocation": {
+          "type": "string",
+          "default": "",
+          "description": "Default location to save new Love2D projects"
+        },
+        "love2dProjectCreator.templatePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to template folder to copy to new projects",
+          "scope": "machine"
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+      }
+    },
+    "commands": [
+      {
+        "command": "love2d-project-creator.createProject",
+        "title": "Create Love2D Project"
+      },
+      {
+        "command": "love2d-project-creator.openProject",
+        "title": "Open Love2D Project"
+      },
+        {
+          "command": "love2d-project-creator.deleteProject",
+          "title": "Delete Project",
+          "icon": "$(trash)"
+        },
+        {
+          "command": "love2d-project-creator.revealInFinder",
+          "title": "Reveal in Finder",
+          "icon":"$(search)"
+        }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "love2d-project-creator",
+          "title": "Love2D",
+          "icon": "assets/icon_bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "love2d-project-creator": [
+        {
+          "id": "love2d-project-creator.view",
+          "name": "Project Creator"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "love2d-project-creator.view",
+        "contents": "Welcome to Love2D Project Creator!\n\n[Create New Project](command:love2d-project-creator.createProject)"
+      }
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "love2d-project-creator.revealInFinder",
+          "when": "view == love2d-project-creator.view && viewItem == projectItem",
+          "group": "inline"
+        },
+        {
+          "command": "love2d-project-creator.deleteProject",
+          "when": "view == love2d-project-creator.view && viewItem == projectItem",
+          "group": "inline"
+        }
+      ]
+    }
+  }
+}
