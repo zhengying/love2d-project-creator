@@ -2,7 +2,7 @@
   "name": "love2d-project-creator",
   "displayName": "Love2D Project Creator",
   "description": "A VSCode extension for fast Love2D project creation with template management and project organization",
-  "version": "1.0.24",
+  "version": "1.0.29",
   "publisher": "zhengying",
   "icon": "assets/icon.png",
   "repository": {
@@ -15,9 +15,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    
-  ],
+  "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
     "configuration": {
@@ -43,16 +41,16 @@
         "command": "love2d-project-creator.openProject",
         "title": "Open Love2D Project"
       },
-        {
-          "command": "love2d-project-creator.deleteProject",
-          "title": "Delete Project",
-          "icon": "$(trash)"
-        },
-        {
-          "command": "love2d-project-creator.revealInFinder",
-          "title": "Reveal in Finder",
-          "icon":"$(search)"
-        }
+      {
+        "command": "love2d-project-creator.deleteProject",
+        "title": "Delete Project",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "love2d-project-creator.revealInFinder",
+        "title": "Reveal in Finder",
+        "icon": "$(search)"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
@@ -91,5 +89,8 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0"
   }
 }

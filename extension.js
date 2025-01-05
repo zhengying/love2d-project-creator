@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const fs = require('fs');
+const fse = require('fs-extra');
 const path = require('path');
 class ProjectCreatorProvider {
   constructor() {
@@ -62,12 +63,26 @@ class ProjectCreatorProvider {
         defaultWorkspace = path.join(process.env.HOME, defaultWorkspace.slice(1));
       }
       
-      // Create projects and templates folders if they don't exist
+      // Create workspace structure if it doesn't exist
+      fs.mkdirSync(defaultWorkspace, { recursive: true });
       const projectsPath = path.join(defaultWorkspace, 'projects');
       const templatesPath = path.join(defaultWorkspace, 'templates');
       fs.mkdirSync(projectsPath, { recursive: true });
       fs.mkdirSync(templatesPath, { recursive: true });
       
+      // Copy templates if they don't exist in workspace
+      const extensionTemplatesPath = path.join(__dirname, 'assets', 'templates');
+      if (!fs.existsSync(path.join(templatesPath, 'default'))) {
+        console.log('Copying templates to workspace:', templatesPath);
+        try {
+          fse.copySync(extensionTemplatesPath, templatesPath);
+          console.log('Templates copied successfully');
+        } catch (error) {
+          console.error('Error copying templates:', error);
+        }
+      }
+      
+      // List projects from projects folder
       if (fs.existsSync(projectsPath)) {
         const projects = fs.readdirSync(projectsPath, { withFileTypes: true })
           .filter(dirent => dirent.isDirectory())
@@ -148,11 +163,26 @@ async function activate(context) {
       
       if (selectedPath) {
         await config.update('defaultWorkspace', selectedPath[0].fsPath, vscode.ConfigurationTarget.Global);
-        // Create initial structure
-        const projectsPath = path.join(selectedPath[0].fsPath, 'projects');
-        const templatesPath = path.join(selectedPath[0].fsPath, 'templates');
+        // Create workspace structure and copy templates
+        const workspacePath = selectedPath[0].fsPath;
+        fs.mkdirSync(workspacePath, { recursive: true });
+        const projectsPath = path.join(workspacePath, 'projects');
+        const templatesPath = path.join(workspacePath, 'templates');
         fs.mkdirSync(projectsPath, { recursive: true });
         fs.mkdirSync(templatesPath, { recursive: true });
+        
+        // Copy templates from extension to workspace/templates
+        const extensionTemplatesPath = path.join(__dirname, 'assets', 'templates');
+        console.log('Initial setup - Copying templates from:', extensionTemplatesPath);
+        console.log('To templates folder:', templatesPath);
+        try {
+          await fse.copy(extensionTemplatesPath, templatesPath);
+          console.log('Templates copied successfully during initial setup');
+        } catch (error) {
+          console.error('Error copying templates during initial setup:', error);
+          vscode.window.showErrorMessage(`Error copying templates: ${error.message}`);
+        }
+        
         vscode.window.showInformationMessage(`Workspace initialized at ${selectedPath[0].fsPath}`);
       }
     }
@@ -198,58 +228,52 @@ async function activate(context) {
       }
     }
     
-    // Create projects and templates folders
+    // Ensure workspace structure exists
+    fs.mkdirSync(workspacePath, { recursive: true });
     const projectsPath = path.join(workspacePath, 'projects');
     const templatesPath = path.join(workspacePath, 'templates');
     fs.mkdirSync(projectsPath, { recursive: true });
     fs.mkdirSync(templatesPath, { recursive: true });
     
     const fullPath = path.join(projectsPath, projectName);
-      
-      // Use templates folder for template copying
-      const templatePath = path.join(workspacePath, 'templates');
-
+    
     try {
-      // Create project directory
-      fs.mkdirSync(fullPath);
-
-      // Create main.lua
-      fs.writeFileSync(path.join(fullPath, 'main.lua'), `
-if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
-  require("lldebugger").start()
-end
-
-function love.load()
-    -- Initialize game
-end
-
-function love.update(dt)
-    -- Update game state
-end
-
-function love.draw()
-    -- Draw game
-end`);
-
-      // Create conf.lua
-      fs.writeFileSync(path.join(fullPath, 'conf.lua'), `function love.conf(t)
-    t.window.title = "${projectName}"
-    t.window.width = 800
-    t.window.height = 600
-end`);
-
-      // Copy template folder if it exists
-      if (fs.existsSync(templatePath)) {
+      // Copy default template to new project
+      const defaultTemplatePath = path.join(templatesPath, 'default');
+      console.log('Creating new project from template:', defaultTemplatePath);
+      console.log('To project path:', fullPath);
+      
+      if (!fs.existsSync(defaultTemplatePath)) {
+        console.log('Default template not found, copying from extension');
+        const extensionTemplatesPath = path.join(__dirname, 'assets', 'templates');
         try {
-          fs.cpSync(templatePath, fullPath, { recursive: true });
-          vscode.window.showInformationMessage(`Template copied from ${templatePath}`);
+          await fse.copy(extensionTemplatesPath, templatesPath);
+          console.log('Templates copied successfully');
         } catch (error) {
-          vscode.window.showErrorMessage(`Error copying template: ${error.message}`);
+          console.error('Error copying templates:', error);
+          vscode.window.showErrorMessage('Error copying templates. Please check extension installation.');
+          return;
         }
       }
 
+      // Copy template to project directory and wait for completion
+      await fse.copy(defaultTemplatePath, fullPath);
+      console.log('Template copied to project directory');
+      
+      // Update conf.lua with project name if it exists
+      const confPath = path.join(fullPath, 'conf.lua');
+      if (fs.existsSync(confPath)) {
+        const confContent = fs.readFileSync(confPath, 'utf8');
+        const updatedContent = confContent.replace(/t\.window\.title = "[^"]*"/, `t.window.title = "${projectName}"`);
+        await fs.promises.writeFile(confPath, updatedContent);
+        console.log('Updated conf.lua with project name');
+      }
+
+      // Wait a moment for file system operations to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Open project in VSCode
-      vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath));
+      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath));
 
       vscode.window.showInformationMessage(`Love2D project '${projectName}' created successfully!`);
     } catch (error) {
