@@ -54,19 +54,25 @@ class ProjectCreatorProvider {
 
     // Add existing projects
     const config = vscode.workspace.getConfiguration('love2dProjectCreator');
-    let defaultLocation = config.get('defaultLocation');
+    let defaultWorkspace = config.get('defaultWorkspace');
     
-    if (defaultLocation) {
+    if (defaultWorkspace) {
       // Expand ~ to home directory
-      if (defaultLocation.startsWith('~')) {
-        defaultLocation = path.join(process.env.HOME, defaultLocation.slice(1));
+      if (defaultWorkspace.startsWith('~')) {
+        defaultWorkspace = path.join(process.env.HOME, defaultWorkspace.slice(1));
       }
       
-      if (fs.existsSync(defaultLocation)) {
-        const projects = fs.readdirSync(defaultLocation, { withFileTypes: true })
+      // Create projects and templates folders if they don't exist
+      const projectsPath = path.join(defaultWorkspace, 'projects');
+      const templatesPath = path.join(defaultWorkspace, 'templates');
+      fs.mkdirSync(projectsPath, { recursive: true });
+      fs.mkdirSync(templatesPath, { recursive: true });
+      
+      if (fs.existsSync(projectsPath)) {
+        const projects = fs.readdirSync(projectsPath, { withFileTypes: true })
           .filter(dirent => dirent.isDirectory())
           .map(dirent => {
-            const projectPath = path.join(defaultLocation, dirent.name);
+            const projectPath = path.join(projectsPath, dirent.name);
             return {
               name: dirent.name,
               path: projectPath,
@@ -120,7 +126,38 @@ class ProjectCreatorProvider {
   }
 }
 
-function activate(context) {
+async function activate(context) {
+  // Check for first run initialization
+  const config = vscode.workspace.getConfiguration('love2dProjectCreator');
+  let workspacePath = config.get('defaultWorkspace');
+  
+  if (!workspacePath) {
+    const response = await vscode.window.showInformationMessage(
+      'Would you like to set up your Love2D workspace now?',
+      'Yes',
+      'Later'
+    );
+    
+    if (response === 'Yes') {
+      const selectedPath = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: 'Select default workspace folder'
+      });
+      
+      if (selectedPath) {
+        await config.update('defaultWorkspace', selectedPath[0].fsPath, vscode.ConfigurationTarget.Global);
+        // Create initial structure
+        const projectsPath = path.join(selectedPath[0].fsPath, 'projects');
+        const templatesPath = path.join(selectedPath[0].fsPath, 'templates');
+        fs.mkdirSync(projectsPath, { recursive: true });
+        fs.mkdirSync(templatesPath, { recursive: true });
+        vscode.window.showInformationMessage(`Workspace initialized at ${selectedPath[0].fsPath}`);
+      }
+    }
+  }
+
   // Register the project creator provider
   const projectCreatorProvider = new ProjectCreatorProvider();
   vscode.window.registerTreeDataProvider(
@@ -138,39 +175,39 @@ function activate(context) {
     if (!projectName) return;
 
     const config = vscode.workspace.getConfiguration('love2dProjectCreator');
-    let defaultLocation = config.get('defaultLocation');
+    let workspacePath = config.get('defaultWorkspace');
     
-    let projectPath;
-    if (defaultLocation) {
-      // Expand ~ to home directory
-      if (defaultLocation.startsWith('~')) {
-        defaultLocation = path.join(process.env.HOME, defaultLocation.slice(1));
-      }
-      
-      if (fs.existsSync(defaultLocation)) {
-        projectPath = [vscode.Uri.file(defaultLocation)];
-      } else {
-        projectPath = await vscode.window.showOpenDialog({
-          canSelectFiles: false,
-          canSelectFolders: true,
-          canSelectMany: false,
-          openLabel: 'Select project location'
-        });
-        
-        if (!projectPath) return;
-      }
-    } else {
-      projectPath = await vscode.window.showOpenDialog({
+    if (!workspacePath) {
+      // First time setup - require workspace selection
+      const selectedPath = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
-        openLabel: 'Select project location'
+        openLabel: 'Select workspace folder'
       });
       
-      if (!projectPath) return;
+      if (!selectedPath) return;
+      
+      // Save selected path to settings
+      workspacePath = selectedPath[0].fsPath;
+      await config.update('defaultWorkspace', workspacePath, vscode.ConfigurationTarget.Global);
+    } else {
+      // Expand ~ to home directory if present
+      if (workspacePath.startsWith('~')) {
+        workspacePath = path.join(process.env.HOME, workspacePath.slice(1));
+      }
     }
-
-    const fullPath = path.join(projectPath[0].fsPath, projectName);
+    
+    // Create projects and templates folders
+    const projectsPath = path.join(workspacePath, 'projects');
+    const templatesPath = path.join(workspacePath, 'templates');
+    fs.mkdirSync(projectsPath, { recursive: true });
+    fs.mkdirSync(templatesPath, { recursive: true });
+    
+    const fullPath = path.join(projectsPath, projectName);
+      
+      // Use templates folder for template copying
+      const templatePath = path.join(workspacePath, 'templates');
 
     try {
       // Create project directory
@@ -201,9 +238,8 @@ end`);
     t.window.height = 600
 end`);
 
-      // Copy template folder if configured
-      const templatePath = config.get('templatePath');
-      if (templatePath && fs.existsSync(templatePath)) {
+      // Copy template folder if it exists
+      if (fs.existsSync(templatePath)) {
         try {
           fs.cpSync(templatePath, fullPath, { recursive: true });
           vscode.window.showInformationMessage(`Template copied from ${templatePath}`);

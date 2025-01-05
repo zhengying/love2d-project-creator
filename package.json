@@ -2,7 +2,7 @@
   "name": "love2d-project-creator",
   "displayName": "Love2D Project Creator",
   "description": "A VSCode extension for fast Love2D project creation with template management and project organization",
-  "version": "1.0.18",
+  "version": "1.0.24",
   "publisher": "zhengying",
   "icon": "assets/icon.png",
   "repository": {
@@ -21,18 +21,11 @@
   "main": "./extension.js",
   "contributes": {
     "configuration": {
-      "title": "Love2D Project Creator",
       "properties": {
-        "love2dProjectCreator.defaultLocation": {
+        "love2dProjectCreator.defaultWorkspace": {
           "type": "string",
           "default": "",
-          "description": "Default location to save new Love2D projects"
-        },
-        "love2dProjectCreator.templatePath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to template folder to copy to new projects",
-          "scope": "machine"
+          "description": "Default workspace directory containing projects and templates folders"
         }
       }
     },
